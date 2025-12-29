@@ -96,30 +96,97 @@ if (finalSection) {
         ease: "power3.inOut"
     }, 0);
 }
+// 4. Overlay and Enter Button Logic
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('overlay');
+    const enterBtn = document.getElementById('enter-btn');
+    const bgMusic = document.getElementById('bg-music');
 
-const music = document.getElementById('bg-music');
-const musicToggle = document.getElementById('music-toggle');
+    // Set loop on the music element
+    if (bgMusic) {
+        bgMusic.loop = true;
+        console.log('Audio element found:', bgMusic.src);
+    }
 
-musicToggle.addEventListener('click', () => {
-    // Check if the music file actually loaded
-    if (music.readyState >= 2) { 
-        if (music.paused) {
-            music.play().then(() => {
-                music.volume = 0;
-                gsap.to(music, { volume: 0.5, duration: 2 });
-                document.getElementById('music-icon').innerText = "Pause Music";
-            }).catch(error => {
-                console.error("Playback failed:", error);
-                alert("Please interact with the page first to play music.");
-            });
-        } else {
-            music.pause();
-            document.getElementById('music-icon').innerText = "Play Music";
-        }
+    if (enterBtn && overlay) {
+        enterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Button clicked'); // Debug log
+            
+            // 1. Fade out the overlay
+            overlay.style.opacity = '0';
+            
+            // 2. Play the music with a fade-in (if available)
+            if (bgMusic) {
+                bgMusic.currentTime = 0;
+                bgMusic.play()
+                    .then(() => {
+                        console.log('Music playing from enter button');
+                        bgMusic.volume = 0;
+                        gsap.to(bgMusic, { volume: 0.4, duration: 4 });
+                    })
+                    .catch(err => {
+                        console.log('Audio play error - music file may be missing:', err);
+                    });
+            } else {
+                console.log('Audio element not found or no source set');
+            }
+
+            // 3. Remove the overlay from DOM after it fades
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                
+                // Trigger a "staggered" entry for the hero text
+                gsap.to(".hero .title", { opacity: 1, y: 0, duration: 2, ease: "power4.out" });
+                gsap.to(".hero .subtitle", { opacity: 0.6, y: 0, duration: 2, delay: 0.5 });
+            }, 1500);
+        });
     } else {
-        console.error("Music file not ready. Check the file path.");
-        alert("The music is still loading or the file wasn't found.");
+        console.error('Missing elements:', { enterBtn, overlay });
     }
 });
 
-});
+const music = document.getElementById('bg-music');
+const musicToggle = document.getElementById('music-toggle');
+const musicIcon = document.getElementById('music-icon');
+
+// Add the pulse animation initially - wait for DOM to be ready
+if (musicToggle) {
+    musicToggle.classList.add('pulse-animation');
+
+    musicToggle.addEventListener('click', () => {
+        if (!music) {
+            console.error('Music element not found');
+            return;
+        }
+
+        if (music.paused) {
+            music.play()
+                .then(() => {
+                    console.log('Music is now playing');
+                    music.volume = 0;
+                    // Fade in the volume smoothly using GSAP
+                    gsap.to(music, { volume: 0.5, duration: 3 }); 
+                    
+                    musicIcon.innerText = "Pause Music";
+                    musicToggle.classList.remove('pulse-animation');
+                })
+                .catch(err => {
+                    console.error('Error playing music:', err);
+                    alert('Unable to play music. Please check if the audio file exists.');
+                });
+        } else {
+            // Fade out before pausing
+            gsap.to(music, { 
+                volume: 0, 
+                duration: 1, 
+                onComplete: () => {
+                    music.pause();
+                    musicIcon.innerText = "Play Music";
+                } 
+            });
+        }
+    });
+} else {
+    console.error('Music toggle button not found');
+}
